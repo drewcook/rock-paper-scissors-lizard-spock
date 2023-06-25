@@ -1,95 +1,73 @@
-import Image from 'next/image'
+'use client' // Compatibility issue between Next v13 and MUI v5 - see https://github.com/mui/material-ui/issues/34898 & https://github.com/vercel/next.js/issues/41994
+import { Box, Grid, Typography } from '@mui/material'
+import { NextPage } from 'next'
+import { useAccount } from 'wagmi'
+
+import CreaateGameButton from '@/components/CreateGameButton'
+import PlayerMoves from '@/components/PlayerMoves'
+
 import styles from './page.module.css'
 
-export default function Home() {
-  return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
-        </div>
-      </div>
+const AppPage: NextPage = () => {
+	const { isConnected } = useAccount()
+	// Representing if a connected account is participating in a game
+	const isParticipating = false
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+	return (
+		<Box component="main" className={styles.main}>
+			<Box component="section" textAlign="center">
+				{!isConnected ? (
+					<Box>
+						<Typography variant="h3" textAlign="center" gutterBottom>
+							Welcome!
+						</Typography>
+						<Typography variant="subtitle1" mb={4}>
+							This is a variant of the classic game of &quot;rock-paper-scissors&quot; but with two additional weapons,
+							lizard and spock.
+						</Typography>
+						<Typography variant="subtitle2">
+							FUN FACT:{' '}
+							<i>
+								This variant was first mentioned in a 2005 article in The Times of London and was later the subject of
+								an episode of the American sitcom The Big Bang Theory in 2008.
+							</i>
+						</Typography>
+						<Typography variant="h6" component="p" mt={4}>
+							Connect your wallet to start a new game or join one you are participating in!
+						</Typography>
+					</Box>
+				) : (
+					<>
+						{isParticipating ? (
+							<Box>
+								<Typography variant="h3" textAlign="center" gutterBottom>
+									Current Game
+								</Typography>
+								<Grid container spacing={2} mt={4}>
+									<Grid item xs={12} sm={6}>
+										<PlayerMoves name="Player 1" />
+									</Grid>
+									<Grid item xs={12} sm={6}>
+										<PlayerMoves name="Player 2" />
+									</Grid>
+								</Grid>
+							</Box>
+						) : (
+							<Box>
+								<Typography variant="h3" textAlign="center" gutterBottom>
+									Create a New Game
+								</Typography>
+								<Typography mb={4}>
+									It looks like you are not participating in any games at the moment. Click the button to create a new
+									game.
+								</Typography>
+								<CreaateGameButton />
+							</Box>
+						)}
+					</>
+				)}
+			</Box>
+		</Box>
+	)
 }
+export default AppPage

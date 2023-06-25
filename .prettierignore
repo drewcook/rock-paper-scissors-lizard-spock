@@ -1,0 +1,15 @@
+.next
+dist
+node_modules
+public
+
+.gitignore
+
+*.env
+*.ico
+*.json
+*.lock
+*.log
+*.md
+*.sh
+*.svg

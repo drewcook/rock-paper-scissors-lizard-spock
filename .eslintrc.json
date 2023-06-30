@@ -27,7 +27,8 @@
     "import/no-named-as-default": "error",
     "import/no-unresolved": "warn",
 		"simple-import-sort/imports": "error",
-    "simple-import-sort/exports": "warn"
+    "simple-import-sort/exports": "warn",
+		"@typescript-eslint/ban-ts-comment": "off"
   },
 	"overrides": [
 		// Turn off prop type errors for Next.js pages, due to complexity with TS

@@ -8,6 +8,7 @@ import { Inter } from 'next/font/google'
 import { WagmiConfig } from 'wagmi'
 
 import AppHeader from '@/components/AppHeader'
+import { Web3Provider } from '@/components/Web3Provider'
 import { wagmiConfig } from '@/lib/wagmiConfig'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -22,10 +23,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 		<html lang="en">
 			<body className={inter.className}>
 				<WagmiConfig config={wagmiConfig}>
-					<>
-						<AppHeader />
-						{children}
-					</>
+					<Web3Provider>
+						<>
+							<AppHeader />
+							{children}
+						</>
+					</Web3Provider>
 				</WagmiConfig>
 			</body>
 		</html>

@@ -4,6 +4,7 @@ import { useAccount, useConnect, useDisconnect } from 'wagmi'
 
 import formatAddress from '@/utils/formatAddress'
 
+
 const Profile = () => {
 	const { address, isConnected } = useAccount()
 	const { disconnect } = useDisconnect()

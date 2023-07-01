@@ -2,20 +2,22 @@
 import type { ReactNode } from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { Address, getContract, parseEther } from 'viem'
-import { PublicClient, useAccount, useContractWrite, usePublicClient, useWalletClient, WalletClient } from 'wagmi'
+import { PublicClient, useAccount, useDisconnect, usePublicClient, useWalletClient, WalletClient } from 'wagmi'
 
 import { HASHER_ADDRESS, RPS_ABI } from '@/lib/constants'
+import { IAccountDoc } from '@/lib/models'
 
 import HASHER_ABI from '../lib/abis/hasher.json'
 
 // Create context
 type Web3ContextProps = {
 	contracts: RPSContracts
-	updateGameAddress: (gameAddress: Address) => void
-	gameAddress: Address | undefined
+	connectedAccount: IAccountDoc | undefined
+	disconnect: (callback?: any) => void
+	updateConnectedAccount: (account: IAccountDoc) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<unknown>
-	sendTxLoading: boolean
-	sendTxError: Error | undefined
+	// sendTxLoading: boolean
+	// sendTxError: Error | undefined
 	publicClient: PublicClient
 	walletClient: WalletClient | undefined
 	address: Address | undefined
@@ -35,21 +37,23 @@ type Web3ProviderProps = {
 // Provider component
 export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	const { address } = useAccount()
+	const { disconnect } = useDisconnect()
 	const { data, isError, isLoading } = useWalletClient()
 	const publicClient = usePublicClient()
 	const [walletClient, setWalletClient] = useState<WalletClient | undefined>()
 	const [hasher, setHasher] = useState<unknown>()
 	const [rps, setRps] = useState<unknown>()
-	const [gameAddress, setGameAddress] = useState<Address | undefined>()
-	const {
-		data: txData,
-		isLoading: txLoading,
-		writeAsync,
-	} = useContractWrite({
-		onError: error => setSendTxError(error),
-		onSuccess: () => setSendTxError(undefined),
-	})
-	const [sendTxError, setSendTxError] = useState<Error | undefined>()
+	const [connectedAccount, setConnectedAccount] = useState<IAccountDoc | undefined>()
+
+	// const {
+	// 	data: txData,
+	// 	isLoading: txLoading,
+	// 	writeAsync,
+	// } = useContractWrite({
+	// 	onError: error => setSendTxError(error),
+	// 	onSuccess: () => setSendTxError(undefined),
+	// })
+	// const [sendTxError, setSendTxError] = useState<Error | undefined>()
 
 	// Get wallet client and get hasher contract
 	useEffect(() => {
@@ -65,13 +69,11 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		}
 	}, [data])
 
-	const updateGameAddress = (_gameAddress: Address) => setGameAddress(_gameAddress)
-
 	const makeGameTransaction = async (_fnName: string, _args: any[], _value: number) => {
-		if (!gameAddress) throw new Error('No game address set')
+		if (!connectedAccount?.gameAddress) throw new Error('No game address set')
 		const { request, result } = await publicClient.simulateContract({
 			account: address,
-			address: gameAddress,
+			address: connectedAccount?.gameAddress,
 			abi: RPS_ABI,
 			functionName: _fnName,
 			args: _args,
@@ -81,15 +83,24 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		return [tx, result]
 	}
 
+	const handleDisconnect = (callback?: any) => {
+		disconnect()
+		// reset local state
+		setConnectedAccount(undefined)
+		// Invoke callback
+		if (callback) callback()
+	}
+
 	return (
 		<Web3Context.Provider
 			value={{
 				contracts: { hasher, rps },
-				updateGameAddress,
-				gameAddress,
+				connectedAccount,
+				disconnect: handleDisconnect,
+				updateConnectedAccount: setConnectedAccount,
 				makeGameTransaction,
-				sendTxLoading: txLoading,
-				sendTxError,
+				// sendTxLoading: txLoading,
+				// sendTxError,
 				publicClient,
 				walletClient,
 				address,

@@ -1,13 +1,14 @@
 import { Button, Dialog, DialogTitle, List, ListItem, ListItemButton, ListItemText, Typography } from '@mui/material'
-import { useState } from 'react'
-import { useAccount, useConnect, useDisconnect } from 'wagmi'
+import { useEffect, useState } from 'react'
+import { Address, useAccount, useConnect } from 'wagmi'
 
 import formatAddress from '@/utils/formatAddress'
 
+import { useWeb3 } from './Web3Provider'
 
 const Profile = () => {
+	const { updateConnectedAccount, disconnect } = useWeb3()
 	const { address, isConnected } = useAccount()
-	const { disconnect } = useDisconnect()
 	const [open, setOpen] = useState(false)
 
 	const handleClickOpen = () => {
@@ -19,8 +20,34 @@ const Profile = () => {
 	}
 
 	const handleDisconnect = () => {
-		disconnect()
-		handleClose()
+		if (disconnect) disconnect(handleClose)
+	}
+
+	useEffect(() => {
+		// Check for user address against database and check game this.state.
+		if (isConnected && address) checkForAccount(address)
+	}, [isConnected, address])
+
+	// Make a GET request to check if connected account is part of an ongoing game and return the record
+	const checkForAccount = async (_address: Address) => {
+		try {
+			const response = await fetch(`/api/accounts?address=${_address}`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			const { data, status, message } = await response.json()
+			if (status === 'success') {
+				// Account found
+				if (updateConnectedAccount) updateConnectedAccount(data)
+			} else {
+				// Account not found
+				console.error('Failed to fetch account:', message)
+			}
+		} catch (error) {
+			console.error('Failed to fetch account:', error)
+		}
 	}
 
 	if (isConnected) {

@@ -1,7 +1,7 @@
 import { Box, Button, CircularProgress, Typography } from '@mui/material'
 import { keccak256 } from 'ethers'
 import { useState } from 'react'
-import { encodeDeployData, encodePacked, parseEther } from 'viem'
+import { Address, encodeDeployData, encodePacked, parseEther } from 'viem'
 import { useSignMessage } from 'wagmi'
 
 import { RPS_ABI, RPS_BYTECODE } from '@/lib/constants'
@@ -29,7 +29,7 @@ const CreateNewGame = () => {
 	const { address, publicClient, walletClient, updateGameAddress } = useWeb3()
 	const { error: signError, signMessageAsync } = useSignMessage()
 
-	const handleSubmit = async (_move: Move, _opponentAddress: string, _stake: number, _customMessage: string) => {
+	const handleSubmit = async (_move: Move, _opponentAddress: Address, _stake: number, _customMessage: string) => {
 		try {
 			setSubmitLoading(true)
 			setSubmitError(false)
@@ -63,15 +63,52 @@ const CreateNewGame = () => {
 				const txReceipt = await publicClient?.waitForTransactionReceipt({ hash: `${tx}` })
 				const gameAddress = txReceipt?.contractAddress
 				console.log({ txReceipt, gameAddress })
-				if (gameAddress && updateGameAddress) updateGameAddress(gameAddress)
+				if (gameAddress && updateGameAddress) {
+					updateGameAddress(gameAddress)
+					// Store account info in the database for the given address.This will be used to verify the move later
+					await createAccount(_move, salt, hash, _opponentAddress, _stake, gameAddress)
+				}
 			}
-
-			// TODO: store hash in the database for the given address. This will be used to verify the move later
-			// i.e. [address]: { move, signature, hash, opponent, stake, gameAddress }
 		} catch (e: any) {
 			setSubmitLoading(false)
 			setSubmitError(true)
 			console.error('Error occurred in handleSubmit() - ', e)
+		}
+	}
+
+	// Make a POST request to create new db record about player and game
+	const createAccount = async (
+		move: Move,
+		msgSignature: string,
+		c1Hash: string,
+		opponent: Address,
+		stake: number,
+		gameAddress: Address,
+	) => {
+		try {
+			const response = await fetch('/api/accounts', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({
+					player: address,
+					move,
+					msgSignature,
+					c1Hash,
+					opponent,
+					stake,
+					gameAddress,
+				}),
+			})
+			const { data, status, message } = await response.json()
+			if (status === 'success') {
+				console.log('Account created:', data)
+			} else {
+				console.error('Failed to create account:', message)
+			}
+		} catch (error) {
+			console.error('Failed to create account:', error)
 		}
 	}
 

@@ -1,20 +1,43 @@
 'use client'
 import { Box, Typography } from '@mui/material'
 import { NextPage } from 'next'
+import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 
 import CreateNewGame from '@/components/CreateNewGame'
 import GameDashboard from '@/components/GameDashboard'
 import { useWeb3 } from '@/components/Web3Provider'
+import { IAccountDoc } from '@/lib/models'
+import { AccountStatus } from '@/lib/types'
 
 import styles from './page.module.css'
 
 const AppPage: NextPage = () => {
-	const { isConnected } = useAccount()
+	const { address, isConnected } = useAccount()
+	const { connectedAccount } = useWeb3()
+	const [accountStatus, setAccountStatus] = useState<AccountStatus>(AccountStatus.Unregistered)
+
+	useEffect(() => {
+		if (isConnected) checkIsParticipating(connectedAccount)
+	}, [isConnected, connectedAccount, address])
+
 	// Representing if a connected account is participating in a game
-	// TODO: Determine basec off connected account and database if they have a game in progress
-	const { gameAddress } = useWeb3()
-	const isParticipating = gameAddress !== null && gameAddress !== undefined
+	const checkIsParticipating = (account: IAccountDoc | undefined) => {
+		if (!account) {
+			console.log('not participating')
+			setAccountStatus(AccountStatus.Unregistered)
+		} else if (account.player === address) {
+			// Connected account is initiating player
+			console.log('player')
+			setAccountStatus(AccountStatus.Player)
+		} else if (account.opponent === address) {
+			// Connected account is opponent
+			console.log('opponent')
+			setAccountStatus(AccountStatus.Opponent)
+		} else {
+			setAccountStatus(AccountStatus.Unregistered)
+		}
+	}
 
 	return (
 		<Box component="main" className={styles.main}>
@@ -39,10 +62,10 @@ const AppPage: NextPage = () => {
 							Connect your wallet to start a new game or join one you are participating in!
 						</Typography>
 					</Box>
-				) : isParticipating ? (
-					<GameDashboard />
-				) : (
+				) : accountStatus === AccountStatus.Unregistered ? (
 					<CreateNewGame />
+				) : (
+					<GameDashboard accountStatus={accountStatus} />
 				)}
 			</Box>
 		</Box>

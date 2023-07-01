@@ -7,5 +7,11 @@ export enum Move {
 	Spock = '5',
 }
 
+export enum AccountStatus {
+	Unregistered = 'Unregistered',
+	Player = 'Initiating Player',
+	Opponent = 'Challenged Player',
+}
+
 export type XString = `0x${string}`
 export type WagmiString = XString | Uint8Array

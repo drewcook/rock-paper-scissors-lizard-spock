@@ -12,7 +12,7 @@ import {
 	Typography,
 } from '@mui/material'
 import { useState } from 'react'
-import { isAddress, isAddressEqual } from 'viem'
+import { Address, isAddress, isAddressEqual } from 'viem'
 
 import { Move } from '@/lib/types'
 
@@ -21,7 +21,7 @@ import { useWeb3 } from './Web3Provider'
 type NewGameDialogProps = {
 	open: boolean
 	onClose: () => void
-	onSubmit: (selectedMove: Move, opponentAddress: string, stake: number, customMessage: string) => void
+	onSubmit: (selectedMove: Move, opponentAddress: Address, stake: number, customMessage: string) => void
 }
 
 const NewGameDialog = ({ open, onClose, onSubmit }: NewGameDialogProps) => {
@@ -57,7 +57,7 @@ const NewGameDialog = ({ open, onClose, onSubmit }: NewGameDialogProps) => {
 			setValidationError('Please enter a message for your identity')
 		} else {
 			// All validations pass, pass form values to handler
-			onSubmit(selectedMove as Move, opponentAddress, stakeAmount, customMessage)
+			onSubmit(selectedMove as Move, opponentAddress as Address, stakeAmount, customMessage)
 			handleClose()
 		}
 	}

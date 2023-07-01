@@ -2,7 +2,7 @@
 import type { ReactNode } from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { Address, getContract, parseEther } from 'viem'
-import { PublicClient, useAccount, useDisconnect, usePublicClient, useWalletClient, WalletClient } from 'wagmi'
+import { PublicClient, WalletClient, useAccount, useDisconnect, usePublicClient, useWalletClient } from 'wagmi'
 
 import { HASHER_ADDRESS, RPS_ABI } from '@/lib/constants'
 import { IAccountDoc } from '@/lib/models'
@@ -15,6 +15,7 @@ type Web3ContextProps = {
 	connectedAccount: IAccountDoc | undefined
 	disconnect: (callback?: any) => void
 	updateConnectedAccount: (account: IAccountDoc) => void
+	createRpsContract: (gameAddress: Address) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<unknown>
 	// sendTxLoading: boolean
 	// sendTxError: Error | undefined
@@ -91,6 +92,19 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		if (callback) callback()
 	}
 
+	const createRpsContract = async (gameAddress: Address) => {
+		if (!gameAddress) throw new Error('No game address set, plese connect an account')
+		else
+			setRps(
+				getContract({
+					address: gameAddress,
+					abi: RPS_ABI,
+					publicClient,
+					walletClient,
+				}),
+			)
+	}
+
 	return (
 		<Web3Context.Provider
 			value={{
@@ -98,6 +112,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 				connectedAccount,
 				disconnect: handleDisconnect,
 				updateConnectedAccount: setConnectedAccount,
+				createRpsContract,
 				makeGameTransaction,
 				// sendTxLoading: txLoading,
 				// sendTxError,

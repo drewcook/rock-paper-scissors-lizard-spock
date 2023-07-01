@@ -4,7 +4,7 @@ import connectToMongo from '@/lib/db'
 import AccountModel from '@/lib/models'
 
 // Utility for success responses
-export const getSuccessResponse = (data: any, status = 200): NextResponse => {
+const getSuccessResponse = (data: any, status = 200): NextResponse => {
 	return new NextResponse(
 		JSON.stringify({
 			status: 'success',
@@ -18,7 +18,7 @@ export const getSuccessResponse = (data: any, status = 200): NextResponse => {
 }
 
 // Utility for error responses
-export const getErrorResponse = (status = 500, message: string, error: Error | null = null): NextResponse => {
+const getErrorResponse = (status = 500, message: string, error: Error | null = null): NextResponse => {
 	return new NextResponse(
 		JSON.stringify({
 			status: status < 500 ? 'fail' : 'error',

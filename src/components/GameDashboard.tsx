@@ -11,7 +11,13 @@ type GameDashboardProps = {
 }
 
 const GameDashboard = ({ accountStatus }: GameDashboardProps): JSX.Element => {
-	const { connectedAccount /*sendTxLoading, sendTxError*/ } = useWeb3()
+	const {
+		connectedAccount,
+		contracts,
+		/*sendTxLoading, sendTxError*/
+	} = useWeb3()
+
+	console.log(typeof contracts?.rps, typeof contracts?.hasher)
 
 	// Fallback
 	if (!connectedAccount) return <Typography>Connect your wallet to view your game</Typography>

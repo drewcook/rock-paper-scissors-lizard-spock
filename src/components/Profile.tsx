@@ -7,7 +7,7 @@ import formatAddress from '@/utils/formatAddress'
 import { useWeb3 } from './Web3Provider'
 
 const Profile = () => {
-	const { updateConnectedAccount, disconnect } = useWeb3()
+	const { updateConnectedAccount, disconnect, createRpsContract } = useWeb3()
 	const { address, isConnected } = useAccount()
 	const [open, setOpen] = useState(false)
 
@@ -41,6 +41,8 @@ const Profile = () => {
 			if (status === 'success') {
 				// Account found
 				if (updateConnectedAccount) updateConnectedAccount(data)
+				// Create new contract instance for the game
+				if (createRpsContract) createRpsContract(data.gameAddress)
 			} else {
 				// Account not found
 				console.error('Failed to fetch account:', message)

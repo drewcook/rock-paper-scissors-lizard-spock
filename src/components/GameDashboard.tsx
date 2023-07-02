@@ -1,7 +1,8 @@
 import { OpenInNew } from '@mui/icons-material'
-import { Box, Grid, Link, Typography } from '@mui/material'
+import { Box, CircularProgress, Grid, Link, Typography } from '@mui/material'
 
 import { AccountStatus } from '@/lib/types'
+import { formatAddressLong } from '@/utils/formatAddress'
 
 import PlayerMoves from './PlayerMoves'
 import { useWeb3 } from './Web3Provider'
@@ -11,13 +12,20 @@ type GameDashboardProps = {
 }
 
 const GameDashboard = ({ accountStatus }: GameDashboardProps): JSX.Element => {
-	const {
-		connectedAccount,
-		/*sendTxLoading, sendTxError*/
-	} = useWeb3()
+	const { connectedGame } = useWeb3()
+
+	if (accountStatus === AccountStatus.Loading)
+		return (
+			<Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" my={4}>
+				<CircularProgress size={30} />
+				<Typography variant="caption" mt={2}>
+					Checking account status...
+				</Typography>
+			</Box>
+		)
 
 	// Fallback
-	if (!connectedAccount) return <Typography>Connect your wallet to view your game</Typography>
+	if (!connectedGame) return <Typography>Connect your wallet to view your game</Typography>
 
 	return (
 		<Box>
@@ -26,75 +34,80 @@ const GameDashboard = ({ accountStatus }: GameDashboardProps): JSX.Element => {
 			<Typography variant="h3" textAlign="center">
 				Current Game
 			</Typography>
-			<Typography mb={4}>Connected Account Status: {accountStatus}</Typography>
 			<Grid container spacing={2} mt={4}>
 				<Grid item xs={12} md={6}>
 					{/* TODO: Read data from contract, i.e. stake, players, hash, etc */}
-					<Typography variant="h4" textAlign="center" mb={4}>
+					<Typography variant="h4" textAlign="left" mb={4}>
 						Game Data
 					</Typography>
 					<Box textAlign="left">
 						<Typography mb={2}>
 							Game Address:
 							<br />
-							<Link href={`https://sepolia.etherscan.io/address/${connectedAccount.gameAddress}`} target="_blank">
+							<Link href={`https://sepolia.etherscan.io/address/${connectedGame.gameAddress}`} target="_blank">
 								<Typography
+									variant="body2"
 									component="span"
 									display="inline-flex"
 									alignItems="center"
 									justifyContent="center"
 									flexDirection="row"
 								>
-									{connectedAccount.gameAddress} <OpenInNew />
+									{connectedGame.gameAddress}&nbsp;
+									<OpenInNew fontSize="inherit" />
 								</Typography>
 							</Link>
 						</Typography>
 						<Typography mb={2}>
 							Game Stake:
 							<br />
-							{connectedAccount.stake} ETH
+							{connectedGame.stake} ETH
 						</Typography>
 						<Typography mb={2}>
 							Player 1:
 							<br />
-							<Link href={`https://sepolia.etherscan.io/address/${connectedAccount.player}`} target="_blank">
+							<Link href={`https://sepolia.etherscan.io/address/${connectedGame.player}`} target="_blank">
 								<Typography
+									variant="body2"
 									component="span"
 									display="inline-flex"
 									alignItems="center"
 									justifyContent="center"
 									flexDirection="row"
 								>
-									{connectedAccount.player}
-									<OpenInNew />
+									{connectedGame.player}&nbsp;
+									<OpenInNew fontSize="inherit" />
 								</Typography>
 							</Link>
 						</Typography>
 						<Typography mb={2}>
 							Player 2:
 							<br />
-							<Link href={`https://sepolia.etherscan.io/address/${connectedAccount.opponent}`} target="_blank">
+							<Link href={`https://sepolia.etherscan.io/address/${connectedGame.opponent}`} target="_blank">
 								<Typography
+									variant="body2"
 									component="span"
 									display="inline-flex"
 									alignItems="center"
 									justifyContent="center"
 									flexDirection="row"
 								>
-									{connectedAccount.opponent}
-									<OpenInNew />
+									{connectedGame.opponent}&nbsp;
+									<OpenInNew fontSize="inherit" />
 								</Typography>
 							</Link>
 						</Typography>
 						<Typography mb={2}>
 							Player 1 Identity Commitment:
 							<br />
-							{connectedAccount.c1Hash}
+							<Typography variant="body2" component="span">
+								{formatAddressLong(connectedGame.c1Hash)}
+							</Typography>
 						</Typography>
 					</Box>
 				</Grid>
 				<Grid item xs={12} md={6}>
-					<PlayerMoves name="Player 2" />
+					<PlayerMoves name="hi" />
 				</Grid>
 			</Grid>
 		</Box>

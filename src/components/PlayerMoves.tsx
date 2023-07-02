@@ -22,20 +22,20 @@ type PlayerMovesProps = {
 	name: string
 }
 
-const PlayerMoves = (props: PlayerMovesProps): JSX.Element => {
+const PlayerMoves = ({ name }: PlayerMovesProps): JSX.Element => {
 	const { contracts } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
 
 	// For any player to get the timestamp of the last action
 	const handleGetLastAction = async () => {
-		const lastActionTimeStamp = await contracts?.rps.read.lastAction()
+		const lastActionTimeStamp = await contracts?.game.read.lastAction()
 		setLastAction(format(new Date(Number(lastActionTimeStamp)), 'yyyy-MM-dd HH:mm:ss'))
 	}
 
 	// For opponent to make their move
 	const handleMakeMove = async (move: Move) => {
-		console.log('contract', contracts?.rps)
-		const response = await contracts?.rps.simulate.play({ args: [move], value: parseEther('0.38') })
+		console.log('contract', contracts?.game)
+		const response = await contracts?.game.simulate.play({ args: [move], value: parseEther('0.38') })
 		console.log({ response })
 	}
 

@@ -8,6 +8,8 @@ export enum Move {
 }
 
 export enum AccountStatus {
+	Disconnected = 'Disconnected',
+	Loading = 'N/A',
 	Unregistered = 'Unregistered',
 	Player = 'Initiating Player',
 	Opponent = 'Challenged Player',

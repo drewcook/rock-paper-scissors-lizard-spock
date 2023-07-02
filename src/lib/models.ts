@@ -5,6 +5,7 @@ import { Move } from './types'
 
 // Represents a game initiates by account from 'address'
 // Designed to be stored only after a game contract is deployed
+// This model maps to 'connectedGame' in the frontend
 export interface IAccountDoc extends Document {
 	player: Address // address of the account creating the game
 	move: Move // move of the account

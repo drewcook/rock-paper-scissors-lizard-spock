@@ -33,7 +33,8 @@ type Web3ContextProps = {
 	walletClient: WalletClient | undefined
 	showWrongNetwork: boolean
 	disconnect: (callback?: any) => void
-	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<unknown>
+	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<any>
+	readGameValue: (fnName: string) => Promise<any>
 	loadGameForAccount: (account: IAccountDoc) => void
 }
 
@@ -55,6 +56,9 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	makeGameTransaction: async () => {
 		throw new Error('No game address set')
 	},
+	readGameValue: async () => {
+		throw new Error('No game address set')
+	},
 	loadGameForAccount: () => {},
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
@@ -67,7 +71,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	const { disconnect } = useDisconnect()
 	const publicClient = usePublicClient()
 	const { chain } = useNetwork()
-	const { data, isError, isLoading } = useWalletClient()
+	const { data } = useWalletClient()
 	// Local State
 	const [accountStatus, setAccountStatus] = useState<AccountStatus>(AccountStatus.Disconnected)
 	const [connectedGame, setConnectedGame] = useState<IAccountDoc | undefined>()
@@ -90,7 +94,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 
 	const createGameContract = useCallback(
 		async (gameAddress: Address) => {
-			console.log('creating game contract')
 			if (!gameAddress) {
 				throw new Error('No game address set, plese connect an account')
 			} else {
@@ -113,13 +116,29 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		createGameContract(account.gameAddress)
 	}
 
+	const readGameValue = useCallback(
+		async (valueName: string) => {
+			if (!connectedGame?.gameAddress) {
+				throw new Error('No game address set')
+			}
+			const data = await publicClient?.readContract({
+				address: connectedGame.gameAddress,
+				abi: RPS_ABI,
+				account: address,
+				functionName: valueName,
+			})
+			return data
+		},
+		[connectedGame?.gameAddress],
+	)
+
 	const makeGameTransaction = useCallback(
 		async (fnName: string, args: any[], value: number) => {
 			console.log('making game transaction')
 			if (!connectedGame?.gameAddress) {
 				throw new Error('No game address set')
 			}
-			const { request, result } = await publicClient.simulateContract({
+			const { request } = await publicClient.simulateContract({
 				account: address,
 				address: connectedGame?.gameAddress,
 				abi: RPS_ABI,
@@ -128,14 +147,13 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 				value: parseEther(`${value}`),
 			})
 			const tx = await walletClient?.writeContract(request)
-			return [tx, result]
+			return tx
 		},
 		[connectedGame?.gameAddress, publicClient, walletClient, address],
 	)
 
 	// Make a GET request to check if connected account is part of an ongoing game and return the record
 	const checkForAccount = async (_address: Address) => {
-		console.log('checking for account')
 		try {
 			// Show as loading while fetching address details
 			setAccountStatus(AccountStatus.Loading)
@@ -162,7 +180,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 
 	// Checks against the given account record (connectedGame) to see if the connected account is either the player, opponent, or not participating
 	const checkAccountStatus = (account: IAccountDoc | undefined) => {
-		console.log('checking for account status')
 		if (!account) {
 			setAccountStatus(AccountStatus.Unregistered)
 		} else if (account.player === address) {
@@ -178,7 +195,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	// Check for chain and address changes
 	// Check for account status only if on preferred chain
 	useEffect(() => {
-		console.log('checking for chain and address changes')
 		if (!chain || !address) return
 		const wrongNetwork = (chain.unsupported && chain.id !== PREFERRED_CHAIN_ID) || false
 		setShowWrongNetwork(wrongNetwork)
@@ -220,6 +236,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			walletClient,
 			showWrongNetwork,
 			disconnect: handleDisconnect,
+			readGameValue,
 			makeGameTransaction,
 			loadGameForAccount,
 		})

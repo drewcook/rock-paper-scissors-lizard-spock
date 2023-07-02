@@ -11,10 +11,9 @@ import {
 	Typography,
 } from '@mui/material'
 import { format } from 'date-fns'
-import { useState } from 'react'
-import { numberToBytes, numberToHex, parseEther, toBytes } from 'viem'
+import { useEffect, useState } from 'react'
+import { numberToBytes } from 'viem'
 
-import { RPS_ABI } from '@/lib/constants'
 import { IAccountDoc } from '@/lib/models'
 import { AccountStatus, Move } from '@/lib/types'
 
@@ -27,7 +26,7 @@ const styles = {
 		m: 0,
 	},
 	btn: {
-		mb: 2,
+		mt: 2,
 		'&:last-child': {
 			mb: 0,
 		},
@@ -39,10 +38,30 @@ type GameMovesProps = {
 }
 
 const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
-	const { address, accountStatus, contracts, publicClient, walletClient } = useWeb3()
+	const { accountStatus, readGameValue, makeGameTransaction } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
 	const [openDialog, setOpenDialog] = useState<boolean>(false)
 	const [selectedMove, setSelectedMove] = useState<Move>(Move.Rock)
+	const [timeoutHasExpired, setTimeoutHasExpired] = useState<boolean>(false)
+
+	useEffect(() => {
+		checkTimeoutExpired()
+	}, [])
+
+	const checkTimeoutExpired = async () => {
+		const timeout = await readGameValue('TIMEOUT')
+		const lastAction = await readGameValue('lastAction')
+		console.log({ timeout, lastAction })
+		if (!timeout || !lastAction) {
+			setTimeoutHasExpired(false)
+		} else if (new Date() > new Date(Number(lastAction) + Number(timeout) * 1000)) {
+			console.log('timeout has expired')
+			setTimeoutHasExpired(true)
+		} else {
+			console.log('timeout has not expired')
+			setTimeoutHasExpired(false)
+		}
+	}
 
 	const handleOpenDialog = () => {
 		setOpenDialog(true)
@@ -58,57 +77,53 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 
 	// For any player to get the timestamp of the last action
 	const handleGetLastAction = async () => {
-		const lastActionTimeStamp = await publicClient?.readContract({
-			address: connectedGame.gameAddress,
-			abi: RPS_ABI,
-			functionName: 'lastAction',
-		})
-		setLastAction(format(new Date(Number(lastActionTimeStamp)), 'MM/dd/yyyy @ HH:mm a'))
+		// Validation guard / Access-control
+		const data = await readGameValue('lastAction')
+		setLastAction(format(new Date(Number(data)), 'MM/dd/yyyy @ HH:mm a'))
 	}
 
-	// For any player to check if the opponent has timed out
+	// For both player and opponent to call to check if opposite player has timed out
 	const handleCheckTimeout = async () => {
-		let resp: any
-		if (accountStatus !== AccountStatus.Player) {
-			resp = await publicClient?.simulateContract({
-				address: connectedGame.gameAddress,
-				abi: RPS_ABI,
-				account: address,
-				functionName: 'j2Timeout',
-			})
-			const hash = await walletClient?.writeContract(resp.request)
-			console.log('Timeout checked successfully!', hash)
+		try {
+			// // Validation guard / Access-control
+			if (accountStatus !== AccountStatus.Player) {
+				const hash = await makeGameTransaction('j2Timeout', [], 0)
+				console.log('Timeout checked successfully!', hash)
+			}
+			// Validation guard / Access-control
+			if (accountStatus !== AccountStatus.Opponent) {
+				const hash = await makeGameTransaction('j1Timeout', [], 0)
+				console.log('Timeout checked successfully!', hash)
+			}
+		} catch (error: any) {
+			console.log('Error checking timeout:', error, error.message)
 		}
-		if (accountStatus !== AccountStatus.Opponent) {
-			resp = await publicClient?.simulateContract({
-				address: connectedGame.gameAddress,
-				abi: RPS_ABI,
-				account: address,
-				functionName: 'j1Timeout',
-			})
-			const hash = await walletClient?.writeContract(resp.request)
-			console.log('Timeout checked successfully!', hash)
-		}
-		console.log({ resp })
 	}
 
-	// For opponent to make their move
+	// For opponent to call to make their move
 	const handleMakeMove = async () => {
 		try {
-			// @ts-ignore
-			const { request } = await publicClient?.simulateContract({
-				address: connectedGame.gameAddress,
-				abi: RPS_ABI,
-				account: address,
-				functionName: 'play',
-				args: [numberToBytes(Number(selectedMove))],
-				value: parseEther(`${connectedGame.stake}`),
-			})
-			const hash = await walletClient?.writeContract(request)
-			console.log('Move played successfully!', hash)
-			handleCloseDialog()
+			// Validation guard / Access-control
+			if (accountStatus === AccountStatus.Opponent) {
+				const hash = await makeGameTransaction('play', [numberToBytes(Number(selectedMove))], connectedGame.stake)
+				console.log('Move played successfully!', hash)
+				handleCloseDialog()
+			}
 		} catch (error: any) {
 			console.log('Error playing move:', error, error.message)
+		}
+	}
+
+	// For player to call to solve the game, using the salt tied to their initial move hash
+	const handleSolve = async () => {
+		try {
+			// Validation guard / Access-control
+			if (accountStatus === AccountStatus.Player) {
+				const hash = await makeGameTransaction('solve', [connectedGame.move, connectedGame.c1Hash], 0)
+				console.log('Game solved successfully!', hash)
+			}
+		} catch (error: any) {
+			console.log('Error solving game:', error, error.message)
 		}
 	}
 
@@ -117,8 +132,17 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			<Button variant="contained" onClick={handleGetLastAction} fullWidth sx={styles.btn}>
 				Get Last Action
 			</Button>
-			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn}>
-				Check Timeout
+			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
+				Last Action: {lastAction && lastAction}
+			</Typography>
+			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn} disabled={!timeoutHasExpired}>
+				Initiate J2 Timeout
+			</Button>
+			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
+				{timeoutHasExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
+			</Typography>
+			<Button variant="contained" onClick={handleSolve} fullWidth sx={styles.btn}>
+				Solve Game
 			</Button>
 		</>
 	)
@@ -128,9 +152,17 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			<Button variant="contained" onClick={handleGetLastAction} fullWidth sx={styles.btn}>
 				Get Last Action
 			</Button>
-			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn}>
-				Check Timeout
+
+			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
+				Last Action: {lastAction && lastAction}
+			</Typography>
+
+			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn} disabled={!timeoutHasExpired}>
+				Initiate J1 Timeout
 			</Button>
+			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
+				{timeoutHasExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
+			</Typography>
 			<Button variant="contained" onClick={handleOpenDialog} fullWidth sx={styles.btn}>
 				Make Move
 			</Button>
@@ -168,11 +200,10 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 				Available Actions
 			</Typography>
 			<Paper elevation={2} sx={styles.paper}>
-				{lastAction && (
-					<Typography variant="caption" display="block" my={4}>
-						Last Action: {lastAction}
-					</Typography>
-				)}
+				<Typography variant="h6" mb={2}>
+					As the <strong>{accountStatus}</strong> in this game, you have the following actions available for you to
+					call:
+				</Typography>
 				{accountStatus === AccountStatus.Player && <PlayerActions />}
 				{accountStatus === AccountStatus.Opponent && <OpponentActions />}
 			</Paper>

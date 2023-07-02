@@ -8,6 +8,10 @@ export const moveDisplayName = (_move: Move): string => {
 			return 'Paper'
 		case Move.Scissors:
 			return 'Scissors'
+		case Move.Lizard:
+			return 'Lizard'
+		case Move.Spock:
+			return 'Spock'
 		default:
 			return 'Unknown'
 	}

@@ -30,6 +30,7 @@ type GameMovesProps = {
 const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 	const { accountStatus, contracts } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
+	console.log({ connectedGame })
 
 	// For any player to get the timestamp of the last action
 	const handleGetLastAction = async () => {
@@ -39,8 +40,14 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 
 	// For any player to check if the opponent has timed out
 	const handleCheckTimeout = async () => {
-		const isTimeout = await contracts?.game.read.j1Timeout()
-		console.log({ isTimeout })
+		let resp
+		if (accountStatus !== AccountStatus.Player) {
+			resp = await contracts?.game.read.j2Timeout()
+		}
+		if (accountStatus !== AccountStatus.Opponent) {
+			resp = await contracts?.game.read.j1Timeout()
+		}
+		console.log({ resp })
 	}
 
 	// For opponent to make their move
@@ -68,6 +75,9 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			</Button>
 			<Button variant="contained" onClick={() => handleMakeMove(Move.Spock)} fullWidth sx={styles.btn}>
 				Make Spock Move
+			</Button>
+			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn}>
+				Check Timeout
 			</Button>
 		</>
 	)

@@ -12,7 +12,7 @@ const GameStats = ({ connectedGame }: GameStatsProps): JSX.Element => (
 	<>
 		{/* TODO: Read data from contract, i.e. stake, players, hash, etc */}
 		<Typography variant="h4" textAlign="left" mb={4}>
-			Game Data
+			Game Info
 		</Typography>
 		<Box textAlign="left">
 			<Typography mb={2}>

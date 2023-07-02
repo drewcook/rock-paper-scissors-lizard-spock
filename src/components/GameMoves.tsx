@@ -11,11 +11,15 @@ import { useWeb3 } from './Web3Provider'
 
 const styles = {
 	paper: {
-		p: 2,
-		m: 2,
+		py: 4,
+		px: 2,
+		m: 0,
 	},
 	btn: {
 		mb: 2,
+		'&:last-child': {
+			mb: 0,
+		},
 	},
 }
 
@@ -30,7 +34,7 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 	// For any player to get the timestamp of the last action
 	const handleGetLastAction = async () => {
 		const lastActionTimeStamp = await contracts?.game.read.lastAction()
-		setLastAction(format(new Date(Number(lastActionTimeStamp)), 'yyyy-MM-dd HH:mm:ss'))
+		setLastAction(format(new Date(Number(lastActionTimeStamp)), 'MM/dd/yyyy @ HH:mm a'))
 	}
 
 	// For any player to check if the opponent has timed out
@@ -69,18 +73,20 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 	)
 
 	return (
-		<Paper elevation={2} sx={styles.paper}>
+		<>
 			<Typography variant="h4" mb={4}>
 				Available Actions
 			</Typography>
-			{lastAction && (
-				<Typography variant="caption" mb={2} mt={2}>
-					Last Action: {lastAction}
-				</Typography>
-			)}
-			{accountStatus === AccountStatus.Player && <PlayerActions />}
-			{accountStatus === AccountStatus.Opponent && <OpponentActions />}
-		</Paper>
+			<Paper elevation={2} sx={styles.paper}>
+				{lastAction && (
+					<Typography variant="caption" display="block" my={4}>
+						Last Action: {lastAction}
+					</Typography>
+				)}
+				{accountStatus === AccountStatus.Player && <PlayerActions />}
+				{accountStatus === AccountStatus.Opponent && <OpponentActions />}
+			</Paper>
+		</>
 	)
 }
 

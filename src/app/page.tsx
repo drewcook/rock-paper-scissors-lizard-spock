@@ -1,5 +1,5 @@
 'use client'
-import { Alert, Box, Typography } from '@mui/material'
+import { Alert, Box, Container, Typography } from '@mui/material'
 import { NextPage } from 'next'
 import { useAccount } from 'wagmi'
 
@@ -58,17 +58,19 @@ const AppPage: NextPage = () => {
 
 	return (
 		<Box component="main" className={styles.main}>
-			<Box component="section" textAlign="center">
-				{showWrongNetwork ? (
-					<WrongNetwork />
-				) : showDisconnected ? (
-					<Disconnected />
-				) : showUnregistered ? (
-					<Unregistered />
-				) : (
-					<Registered />
-				)}
-			</Box>
+			<Container maxWidth="md">
+				<Box component="section" textAlign="center">
+					{showWrongNetwork ? (
+						<WrongNetwork />
+					) : showDisconnected ? (
+						<Disconnected />
+					) : showUnregistered ? (
+						<Unregistered />
+					) : (
+						<Registered />
+					)}
+				</Box>
+			</Container>
 		</Box>
 	)
 }

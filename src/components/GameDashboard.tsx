@@ -33,12 +33,12 @@ const GameDashboard = ({ accountStatus }: GameDashboardProps): JSX.Element => {
 			<Typography variant="h3" textAlign="center">
 				Current Game
 			</Typography>
-			<Grid container spacing={2} mt={4}>
-				<Grid item xs={12} md={6}>
-					<GameStats connectedGame={connectedGame} />
-				</Grid>
+			<Grid container spacing={4} mt={4}>
 				<Grid item xs={12} md={6}>
 					<GameMoves connectedGame={connectedGame} />
+				</Grid>
+				<Grid item xs={12} md={6}>
+					<GameStats connectedGame={connectedGame} />
 				</Grid>
 			</Grid>
 		</Box>

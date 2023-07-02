@@ -33,8 +33,8 @@ type Web3ContextProps = {
 	walletClient: WalletClient | undefined
 	showWrongNetwork: boolean
 	disconnect: (callback?: any) => void
-	setConnectedGame: (data: IAccountDoc) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<unknown>
+	loadGameForAccount: (account: IAccountDoc) => void
 }
 
 type Web3ProviderProps = {
@@ -55,7 +55,7 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	makeGameTransaction: async () => {
 		throw new Error('No game address set')
 	},
-	setConnectedGame: () => {},
+	loadGameForAccount: () => {},
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
 const Web3Context = createContext<Web3ContextProps>(initialWeb3ContextValue)
@@ -107,6 +107,12 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		[publicClient, walletClient],
 	)
 
+	const loadGameForAccount = (account: IAccountDoc) => {
+		checkAccountStatus(account)
+		setConnectedGame(account)
+		createGameContract(account.gameAddress)
+	}
+
 	const makeGameTransaction = useCallback(
 		async (fnName: string, args: any[], value: number) => {
 			console.log('making game transaction')
@@ -141,10 +147,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			})
 			const { data, status, message } = await response.json()
 			if (status === 'success') {
-				// Account/Game found, check account status and load game
-				checkAccountStatus(data)
-				setConnectedGame(data)
-				createGameContract(data.gameAddress)
+				// Account/Game found, load game
+				loadGameForAccount(data)
 			} else {
 				// Account not found
 				console.error('Failed to fetch account:', message)
@@ -217,7 +221,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			showWrongNetwork,
 			disconnect: handleDisconnect,
 			makeGameTransaction,
-			setConnectedGame,
+			loadGameForAccount,
 		})
 	}, [accountStatus, address, connectedGame, hasherContract, gameContract, publicClient, showWrongNetwork])
 

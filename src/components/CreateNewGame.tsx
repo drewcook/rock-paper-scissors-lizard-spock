@@ -26,7 +26,7 @@ const CreateNewGame = () => {
 	const [submitLoading, setSubmitLoading] = useState(false)
 	const [submitError, setSubmitError] = useState(false)
 	// Hooks
-	const { address, publicClient, walletClient, setConnectedGame } = useWeb3()
+	const { address, publicClient, walletClient, loadGameForAccount } = useWeb3()
 	const { error: signError, signMessageAsync } = useSignMessage()
 
 	const handleSubmit = async (_move: Move, _opponentAddress: Address, _stake: number, _customMessage: string) => {
@@ -102,7 +102,7 @@ const CreateNewGame = () => {
 			if (status === 'success') {
 				console.log('Account/Game created:', data)
 				// Set the connected game in the Web3Provider for global state
-				if (data) setConnectedGame(data)
+				if (data) loadGameForAccount(data)
 			} else {
 				console.error('Failed to create account for game:', message)
 			}

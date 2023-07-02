@@ -51,7 +51,6 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 	const checkTimeoutExpired = async () => {
 		const timeout = await readGameValue('TIMEOUT')
 		const lastAction = await readGameValue('lastAction')
-		console.log({ timeout, lastAction })
 		if (!timeout || !lastAction) {
 			setTimeoutHasExpired(false)
 		} else if (new Date() > new Date(Number(lastAction) + Number(timeout) * 1000)) {

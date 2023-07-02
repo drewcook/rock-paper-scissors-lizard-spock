@@ -134,7 +134,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 
 	const makeGameTransaction = useCallback(
 		async (fnName: string, args: any[], value: number) => {
-			console.log('making game transaction')
 			if (!connectedGame?.gameAddress) {
 				throw new Error('No game address set')
 			}

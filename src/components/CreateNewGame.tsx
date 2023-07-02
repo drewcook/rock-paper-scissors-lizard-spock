@@ -44,12 +44,10 @@ const CreateNewGame = () => {
 			// Make tx to generate a keccack256 hash of the move and salt
 			// const tx1 = await hasherWriteAsync({ args: [_move, bytesToBigint(hash)] })
 			// const tx1Receipt = await publicClient?.waitForTransactionReceipt(tx1)
-			// console.log({ tx1Receipt })
 
 			// Or, concatenate and hash locally instead (hard to get return data from the contract itself)
 			// const concatenated = `${salt + _move}`
 			const hash = keccak256(encodePacked(['string', 'string'], [_move, salt]))
-			console.log({ hash })
 
 			// 3. Create new game with the stake amount, move hash, and opponent
 			const calldata = encodeDeployData({ abi: RPS_ABI, bytecode: `0x${RPS_BYTECODE}`, args: [hash, _opponentAddress] })
@@ -62,7 +60,6 @@ const CreateNewGame = () => {
 				// Get the newly deployed contract address for the game
 				const txReceipt = await publicClient?.waitForTransactionReceipt({ hash: `${tx}` })
 				const gameAddress = txReceipt?.contractAddress
-				console.log({ txReceipt, gameAddress })
 				// Store account info in the database for the given address.This will be used to verify the move later
 				if (gameAddress) await createGameAccount(_move, salt, hash, _opponentAddress, _stake, gameAddress)
 			}
@@ -100,7 +97,6 @@ const CreateNewGame = () => {
 			})
 			const { data, status, message } = await response.json()
 			if (status === 'success') {
-				console.log('Account/Game created:', data)
 				// Set the connected game in the Web3Provider for global state
 				if (data) loadGameForAccount(data)
 			} else {

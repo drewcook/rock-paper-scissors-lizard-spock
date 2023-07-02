@@ -1,9 +1,20 @@
-'use client'
-import { Button, Paper, Typography } from '@mui/material'
+import {
+	Button,
+	Dialog,
+	DialogActions,
+	DialogContent,
+	DialogTitle,
+	FormControlLabel,
+	Paper,
+	Radio,
+	RadioGroup,
+	Typography,
+} from '@mui/material'
 import { format } from 'date-fns'
 import { useState } from 'react'
-import { parseEther } from 'viem'
+import { numberToBytes, numberToHex, parseEther, toBytes } from 'viem'
 
+import { RPS_ABI } from '@/lib/constants'
 import { IAccountDoc } from '@/lib/models'
 import { AccountStatus, Move } from '@/lib/types'
 
@@ -28,33 +39,77 @@ type GameMovesProps = {
 }
 
 const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
-	const { accountStatus, contracts } = useWeb3()
+	const { address, accountStatus, contracts, publicClient, walletClient } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
-	console.log({ connectedGame })
+	const [openDialog, setOpenDialog] = useState<boolean>(false)
+	const [selectedMove, setSelectedMove] = useState<Move>(Move.Rock)
+
+	const handleOpenDialog = () => {
+		setOpenDialog(true)
+	}
+
+	const handleCloseDialog = () => {
+		setOpenDialog(false)
+	}
+
+	const handleMoveChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		setSelectedMove(event.target.value as Move)
+	}
 
 	// For any player to get the timestamp of the last action
 	const handleGetLastAction = async () => {
-		const lastActionTimeStamp = await contracts?.game.read.lastAction()
+		const lastActionTimeStamp = await publicClient?.readContract({
+			address: connectedGame.gameAddress,
+			abi: RPS_ABI,
+			functionName: 'lastAction',
+		})
 		setLastAction(format(new Date(Number(lastActionTimeStamp)), 'MM/dd/yyyy @ HH:mm a'))
 	}
 
 	// For any player to check if the opponent has timed out
 	const handleCheckTimeout = async () => {
-		let resp
+		let resp: any
 		if (accountStatus !== AccountStatus.Player) {
-			resp = await contracts?.game.read.j2Timeout()
+			resp = await publicClient?.simulateContract({
+				address: connectedGame.gameAddress,
+				abi: RPS_ABI,
+				account: address,
+				functionName: 'j2Timeout',
+			})
+			const hash = await walletClient?.writeContract(resp.request)
+			console.log('Timeout checked successfully!', hash)
 		}
 		if (accountStatus !== AccountStatus.Opponent) {
-			resp = await contracts?.game.read.j1Timeout()
+			resp = await publicClient?.simulateContract({
+				address: connectedGame.gameAddress,
+				abi: RPS_ABI,
+				account: address,
+				functionName: 'j1Timeout',
+			})
+			const hash = await walletClient?.writeContract(resp.request)
+			console.log('Timeout checked successfully!', hash)
 		}
 		console.log({ resp })
 	}
 
 	// For opponent to make their move
-	const handleMakeMove = async (move: Move) => {
-		console.log('contract', contracts?.game)
-		const response = await contracts?.game.simulate.play({ args: [move], value: parseEther('0.38') })
-		console.log({ response })
+	const handleMakeMove = async () => {
+		try {
+			// @ts-ignore
+			const { request } = await publicClient?.simulateContract({
+				address: connectedGame.gameAddress,
+				abi: RPS_ABI,
+				account: address,
+				functionName: 'play',
+				args: [numberToBytes(Number(selectedMove))],
+				value: parseEther(`${connectedGame.stake}`),
+			})
+			const hash = await walletClient?.writeContract(request)
+			console.log('Move played successfully!', hash)
+			handleCloseDialog()
+		} catch (error: any) {
+			console.log('Error playing move:', error, error.message)
+		}
 	}
 
 	const PlayerActions = (): JSX.Element => (
@@ -73,13 +128,38 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			<Button variant="contained" onClick={handleGetLastAction} fullWidth sx={styles.btn}>
 				Get Last Action
 			</Button>
-			<Button variant="contained" onClick={() => handleMakeMove(Move.Spock)} fullWidth sx={styles.btn}>
-				Make Spock Move
-			</Button>
 			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn}>
 				Check Timeout
 			</Button>
+			<Button variant="contained" onClick={handleOpenDialog} fullWidth sx={styles.btn}>
+				Make Move
+			</Button>
 		</>
+	)
+
+	const GameMoveDialog = (): JSX.Element => (
+		<Dialog open={openDialog} onClose={handleCloseDialog}>
+			<DialogTitle>Make Your Move</DialogTitle>
+			<DialogContent>
+				<Typography variant="body2" color="textSecondary" mb={2}>
+					Stake: {`${connectedGame.stake} ETH`}
+				</Typography>
+				<Typography variant="body1" gutterBottom>
+					Select your move:
+				</Typography>
+				<RadioGroup name="move" value={selectedMove} onChange={handleMoveChange}>
+					<FormControlLabel value={Move.Rock} control={<Radio />} label="Rock" />
+					<FormControlLabel value={Move.Paper} control={<Radio />} label="Paper" />
+					<FormControlLabel value={Move.Scissors} control={<Radio />} label="Scissors" />
+					<FormControlLabel value={Move.Lizard} control={<Radio />} label="Lizard" />
+					<FormControlLabel value={Move.Spock} control={<Radio />} label="Spock" />
+				</RadioGroup>
+			</DialogContent>
+			<DialogActions>
+				<Button onClick={handleCloseDialog}>Cancel</Button>
+				<Button onClick={handleMakeMove}>Submit</Button>
+			</DialogActions>
+		</Dialog>
 	)
 
 	return (
@@ -96,6 +176,7 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 				{accountStatus === AccountStatus.Player && <PlayerActions />}
 				{accountStatus === AccountStatus.Opponent && <OpponentActions />}
 			</Paper>
+			<GameMoveDialog />
 		</>
 	)
 }

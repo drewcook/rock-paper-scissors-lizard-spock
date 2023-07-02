@@ -33,6 +33,7 @@ type Web3ContextProps = {
 	walletClient: WalletClient | undefined
 	showWrongNetwork: boolean
 	disconnect: (callback?: any) => void
+	setConnectedGame: (data: IAccountDoc) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<unknown>
 }
 
@@ -51,9 +52,10 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	walletClient: undefined,
 	showWrongNetwork: false,
 	disconnect: () => {},
-	makeGameTransaction: async (fnName, args, value) => {
+	makeGameTransaction: async () => {
 		throw new Error('No game address set')
 	},
+	setConnectedGame: () => {},
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
 const Web3Context = createContext<Web3ContextProps>(initialWeb3ContextValue)
@@ -215,6 +217,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			showWrongNetwork,
 			disconnect: handleDisconnect,
 			makeGameTransaction,
+			setConnectedGame,
 		})
 	}, [accountStatus, address, connectedGame, hasherContract, gameContract, publicClient, showWrongNetwork])
 

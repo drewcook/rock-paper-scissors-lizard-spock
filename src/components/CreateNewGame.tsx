@@ -26,7 +26,7 @@ const CreateNewGame = () => {
 	const [submitLoading, setSubmitLoading] = useState(false)
 	const [submitError, setSubmitError] = useState(false)
 	// Hooks
-	const { address, publicClient, walletClient, updateGameAddress } = useWeb3()
+	const { address, publicClient, walletClient, setConnectedGame } = useWeb3()
 	const { error: signError, signMessageAsync } = useSignMessage()
 
 	const handleSubmit = async (_move: Move, _opponentAddress: Address, _stake: number, _customMessage: string) => {
@@ -63,11 +63,8 @@ const CreateNewGame = () => {
 				const txReceipt = await publicClient?.waitForTransactionReceipt({ hash: `${tx}` })
 				const gameAddress = txReceipt?.contractAddress
 				console.log({ txReceipt, gameAddress })
-				if (gameAddress && updateGameAddress) {
-					updateGameAddress(gameAddress)
-					// Store account info in the database for the given address.This will be used to verify the move later
-					await createAccount(_move, salt, hash, _opponentAddress, _stake, gameAddress)
-				}
+				// Store account info in the database for the given address.This will be used to verify the move later
+				if (gameAddress) await createGameAccount(_move, salt, hash, _opponentAddress, _stake, gameAddress)
 			}
 		} catch (e: any) {
 			setSubmitLoading(false)
@@ -77,7 +74,7 @@ const CreateNewGame = () => {
 	}
 
 	// Make a POST request to create new db record about player and game
-	const createAccount = async (
+	const createGameAccount = async (
 		move: Move,
 		msgSignature: string,
 		c1Hash: string,
@@ -103,12 +100,14 @@ const CreateNewGame = () => {
 			})
 			const { data, status, message } = await response.json()
 			if (status === 'success') {
-				console.log('Account created:', data)
+				console.log('Account/Game created:', data)
+				// Set the connected game in the Web3Provider for global state
+				if (data) setConnectedGame(data)
 			} else {
-				console.error('Failed to create account:', message)
+				console.error('Failed to create account for game:', message)
 			}
 		} catch (error) {
-			console.error('Failed to create account:', error)
+			console.error('Failed to create account for game:', error)
 		}
 	}
 

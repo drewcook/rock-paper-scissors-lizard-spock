@@ -32,10 +32,13 @@ type Web3ContextProps = {
 	publicClient: PublicClient | undefined
 	walletClient: WalletClient | undefined
 	showWrongNetwork: boolean
+	txSuccess: boolean
+	txError: string | null
 	disconnect: (callback?: any) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<any>
 	readGameValue: (fnName: string) => Promise<any>
 	loadGameForAccount: (account: IAccountDoc) => void
+	resetTxNotifications: () => void
 }
 
 type Web3ProviderProps = {
@@ -52,6 +55,8 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	publicClient: undefined,
 	walletClient: undefined,
 	showWrongNetwork: false,
+	txSuccess: false,
+	txError: null,
 	disconnect: () => {},
 	makeGameTransaction: async () => {
 		throw new Error('No game address set')
@@ -60,6 +65,7 @@ const initialWeb3ContextValue: Web3ContextProps = {
 		throw new Error('No game address set')
 	},
 	loadGameForAccount: () => {},
+	resetTxNotifications: () => {},
 }
 /* eslint-enable @typescript-eslint/no-empty-function */
 const Web3Context = createContext<Web3ContextProps>(initialWeb3ContextValue)
@@ -79,6 +85,8 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	const [hasherContract, setHasherContract] = useState<any>()
 	const [walletClient, setWalletClient] = useState<WalletClient | undefined>()
 	const [showWrongNetwork, setShowWrongNetwork] = useState<boolean>(false)
+	const [txSuccess, setTxSuccess] = useState<boolean>(false)
+	const [txError, setTxError] = useState<string | null>(null)
 	// Context state
 	const [web3ContextValue, setWeb3ContextValue] = useState<Web3ContextProps>(initialWeb3ContextValue)
 
@@ -121,35 +129,53 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			if (!connectedGame?.gameAddress) {
 				throw new Error('No game address set')
 			}
-			const data = await publicClient?.readContract({
-				address: connectedGame.gameAddress,
-				abi: RPS_ABI,
-				account: address,
-				functionName: valueName,
-			})
-			return data
+			if (valueName === 'balance') {
+				return await publicClient?.getBalance({ address: connectedGame.gameAddress })
+			} else {
+				return await publicClient?.readContract({
+					address: connectedGame.gameAddress,
+					abi: RPS_ABI,
+					account: address,
+					functionName: valueName,
+				})
+			}
 		},
 		[connectedGame?.gameAddress],
 	)
 
 	const makeGameTransaction = useCallback(
 		async (fnName: string, args: any[], value: number) => {
-			if (!connectedGame?.gameAddress) {
-				throw new Error('No game address set')
+			try {
+				console.info({ fnName, args, value })
+				if (!connectedGame?.gameAddress) {
+					setTxError('No game address set')
+					throw new Error('No game address set')
+				}
+				const { request } = await publicClient.simulateContract({
+					account: address,
+					address: connectedGame?.gameAddress,
+					abi: RPS_ABI,
+					functionName: fnName,
+					args: args,
+					value: parseEther(`${value}`),
+				})
+				const tx = await walletClient?.writeContract(request)
+				setTxSuccess(true)
+				setTxError(null)
+				return tx
+			} catch (error: any) {
+				setTxSuccess(false)
+				setTxError(error.message)
+				throw error
 			}
-			const { request } = await publicClient.simulateContract({
-				account: address,
-				address: connectedGame?.gameAddress,
-				abi: RPS_ABI,
-				functionName: fnName,
-				args: args,
-				value: parseEther(`${value}`),
-			})
-			const tx = await walletClient?.writeContract(request)
-			return tx
 		},
 		[connectedGame?.gameAddress, publicClient, walletClient, address],
 	)
+
+	const resetTxNotifications = () => {
+		setTxSuccess(false)
+		setTxError(null)
+	}
 
 	// Make a GET request to check if connected account is part of an ongoing game and return the record
 	const checkForAccount = async (_address: Address) => {
@@ -234,12 +260,25 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			publicClient,
 			walletClient,
 			showWrongNetwork,
+			txSuccess,
+			txError,
 			disconnect: handleDisconnect,
 			readGameValue,
 			makeGameTransaction,
 			loadGameForAccount,
+			resetTxNotifications,
 		})
-	}, [accountStatus, address, connectedGame, hasherContract, gameContract, publicClient, showWrongNetwork])
+	}, [
+		accountStatus,
+		address,
+		connectedGame,
+		hasherContract,
+		gameContract,
+		publicClient,
+		showWrongNetwork,
+		txSuccess,
+		txError,
+	])
 
 	return <Web3Context.Provider value={web3ContextValue}>{children}</Web3Context.Provider>
 }
@@ -247,7 +286,6 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 // Context hook
 export const useWeb3 = () => {
 	const context: Web3ContextProps = useContext(Web3Context)
-
 	if (context === undefined) {
 		throw new Error('useWeb3 must be used within an Web3Provider component.')
 	}

@@ -11,7 +11,7 @@ import {
 	Typography,
 } from '@mui/material'
 import { format } from 'date-fns'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { numberToBytes } from 'viem'
 
 import { IAccountDoc } from '@/lib/models'
@@ -35,32 +35,15 @@ const styles = {
 
 type GameMovesProps = {
 	connectedGame: IAccountDoc
+	timeoutExpired: boolean
+	canSolve: boolean
 }
 
-const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
+const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps): JSX.Element => {
 	const { accountStatus, readGameValue, makeGameTransaction } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
 	const [openDialog, setOpenDialog] = useState<boolean>(false)
 	const [selectedMove, setSelectedMove] = useState<Move>(Move.Rock)
-	const [timeoutHasExpired, setTimeoutHasExpired] = useState<boolean>(false)
-
-	useEffect(() => {
-		checkTimeoutExpired()
-	}, [])
-
-	const checkTimeoutExpired = async () => {
-		const timeout = await readGameValue('TIMEOUT')
-		const lastAction = await readGameValue('lastAction')
-		if (!timeout || !lastAction) {
-			setTimeoutHasExpired(false)
-		} else if (new Date() > new Date(Number(lastAction) + Number(timeout) * 1000)) {
-			console.log('timeout has expired')
-			setTimeoutHasExpired(true)
-		} else {
-			console.log('timeout has not expired')
-			setTimeoutHasExpired(false)
-		}
-	}
 
 	const handleOpenDialog = () => {
 		setOpenDialog(true)
@@ -95,7 +78,7 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 				console.log('Timeout checked successfully!', hash)
 			}
 		} catch (error: any) {
-			console.log('Error checking timeout:', error, error.message)
+			console.log('Error checking timeout:', error)
 		}
 	}
 
@@ -109,7 +92,7 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 				handleCloseDialog()
 			}
 		} catch (error: any) {
-			console.log('Error playing move:', error, error.message)
+			console.log('Error playing move:', error)
 		}
 	}
 
@@ -122,7 +105,7 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 				console.log('Game solved successfully!', hash)
 			}
 		} catch (error: any) {
-			console.log('Error solving game:', error, error.message)
+			console.log('Error solving game:', error)
 		}
 	}
 
@@ -134,13 +117,27 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
 				Last Action: {lastAction && lastAction}
 			</Typography>
-			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn} disabled={!timeoutHasExpired}>
+			<Button
+				variant="contained"
+				onClick={handleCheckTimeout}
+				fullWidth
+				sx={styles.btn}
+				disabled={!timeoutExpired}
+				color="secondary"
+			>
 				Initiate J2 Timeout
 			</Button>
 			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
-				{timeoutHasExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
+				{timeoutExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
 			</Typography>
-			<Button variant="contained" onClick={handleSolve} fullWidth sx={styles.btn}>
+			<Button
+				variant="contained"
+				onClick={handleSolve}
+				fullWidth
+				sx={styles.btn}
+				color="secondary"
+				disabled={!canSolve}
+			>
 				Solve Game
 			</Button>
 		</>
@@ -151,18 +148,23 @@ const GameMoves = ({ connectedGame }: GameMovesProps): JSX.Element => {
 			<Button variant="contained" onClick={handleGetLastAction} fullWidth sx={styles.btn}>
 				Get Last Action
 			</Button>
-
 			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
 				Last Action: {lastAction && lastAction}
 			</Typography>
-
-			<Button variant="contained" onClick={handleCheckTimeout} fullWidth sx={styles.btn} disabled={!timeoutHasExpired}>
+			<Button
+				variant="contained"
+				onClick={handleCheckTimeout}
+				fullWidth
+				sx={styles.btn}
+				disabled={!timeoutExpired}
+				color="secondary"
+			>
 				Initiate J1 Timeout
 			</Button>
 			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
-				{timeoutHasExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
+				{timeoutExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
 			</Typography>
-			<Button variant="contained" onClick={handleOpenDialog} fullWidth sx={styles.btn}>
+			<Button variant="contained" onClick={handleOpenDialog} fullWidth sx={styles.btn} color="secondary">
 				Make Move
 			</Button>
 		</>

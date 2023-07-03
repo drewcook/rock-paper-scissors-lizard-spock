@@ -113,7 +113,11 @@ const GameDashboard = ({ accountStatus }: GameDashboardProps): JSX.Element => {
 			</Typography>
 			<Grid container spacing={4} mt={4}>
 				<Grid item xs={12} md={6}>
-					<GameMoves connectedGame={connectedGame} timeoutExpired={timeoutHasExpired} canSolve={!!j2Move} />
+					<GameMoves
+						connectedGame={connectedGame}
+						timeoutExpired={timeoutHasExpired}
+						opponentHasMoved={j2Move !== Move.Null}
+					/>
 				</Grid>
 				<Grid item xs={12} md={6}>
 					<GameStats

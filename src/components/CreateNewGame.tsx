@@ -1,11 +1,12 @@
 import { Box, Button, CircularProgress, Typography } from '@mui/material'
-import { keccak256 } from 'ethers'
 import { useState } from 'react'
-import { Address, encodeDeployData, encodePacked, parseEther } from 'viem'
+import { Address, encodeDeployData, parseEther } from 'viem'
 import { useSignMessage } from 'wagmi'
 
 import { RPS_ABI, RPS_BYTECODE } from '@/lib/constants'
 import { Move } from '@/lib/types'
+import generateSaltFromString from '@/utils/generateSaltFromString'
+import hash from '@/utils/hash'
 import { moveDisplayName } from '@/utils/moveDisplayName'
 
 import NewGameDialog from './NewGameDialog'
@@ -34,23 +35,22 @@ const CreateNewGame = () => {
 			setSubmitLoading(true)
 			setSubmitError(false)
 			// 1. Get signature with a custom message to create salt
-			const salt = await signMessageAsync({
+			const messageHash = await signMessageAsync({
 				message: `Please sign this message to create your unique identity for this game. This ensures that you are the owner of this game and are the only one permitted to reveal your move later on to determine the winner. You identity is based off of your move and your custom message:\n\nMove: ${moveDisplayName(
 					_move,
 				)}\nMessage: ${_customMessage}`,
 			})
+			const salt = generateSaltFromString(messageHash)
 
 			// 2. Generate a keccack256 hash of the move and the salt
-			// Make tx to generate a keccack256 hash of the move and salt
-			// const tx1 = await hasherWriteAsync({ args: [_move, bytesToBigint(hash)] })
-			// const tx1Receipt = await publicClient?.waitForTransactionReceipt(tx1)
-
-			// Or, concatenate and hash locally instead (hard to get return data from the contract itself)
-			// const concatenated = `${salt + _move}`
-			const hash = keccak256(encodePacked(['string', 'string'], [_move, salt]))
+			const hashedValue: string = hash(_move, salt)
 
 			// 3. Create new game with the stake amount, move hash, and opponent
-			const calldata = encodeDeployData({ abi: RPS_ABI, bytecode: `0x${RPS_BYTECODE}`, args: [hash, _opponentAddress] })
+			const calldata = encodeDeployData({
+				abi: RPS_ABI,
+				bytecode: `0x${RPS_BYTECODE}`,
+				args: [hashedValue, _opponentAddress],
+			})
 			const tx = await walletClient?.sendTransaction({
 				data: calldata,
 				account: address,
@@ -61,7 +61,8 @@ const CreateNewGame = () => {
 				const txReceipt = await publicClient?.waitForTransactionReceipt({ hash: `${tx}` })
 				const gameAddress = txReceipt?.contractAddress
 				// Store account info in the database for the given address.This will be used to verify the move later
-				if (gameAddress) await createGameAccount(_move, salt, hash, _opponentAddress, _stake, gameAddress)
+				if (gameAddress)
+					await createGameAccount(_move, messageHash, hashedValue, `${salt}`, _opponentAddress, _stake, gameAddress)
 			}
 		} catch (e: any) {
 			setSubmitLoading(false)
@@ -75,6 +76,7 @@ const CreateNewGame = () => {
 		move: Move,
 		msgSignature: string,
 		c1Hash: string,
+		salt: string,
 		opponent: Address,
 		stake: number,
 		gameAddress: Address,
@@ -90,6 +92,7 @@ const CreateNewGame = () => {
 					move,
 					msgSignature,
 					c1Hash,
+					salt,
 					opponent,
 					stake,
 					gameAddress,

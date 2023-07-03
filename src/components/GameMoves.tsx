@@ -36,11 +36,11 @@ const styles = {
 type GameMovesProps = {
 	connectedGame: IAccountDoc
 	timeoutExpired: boolean
-	canSolve: boolean
+	opponentHasMoved: boolean
 }
 
-const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps): JSX.Element => {
-	const { accountStatus, readGameValue, makeGameTransaction } = useWeb3()
+const GameMoves = ({ connectedGame, timeoutExpired, opponentHasMoved }: GameMovesProps): JSX.Element => {
+	const { accountStatus, readGameValue, makeGameTransaction, gameEnded } = useWeb3()
 	const [lastAction, setLastAction] = useState<string>('')
 	const [openDialog, setOpenDialog] = useState<boolean>(false)
 	const [selectedMove, setSelectedMove] = useState<Move>(Move.Rock)
@@ -68,14 +68,14 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 	const handleCheckTimeout = async () => {
 		try {
 			// // Validation guard / Access-control
-			if (accountStatus !== AccountStatus.Player) {
+			if (accountStatus === AccountStatus.Player) {
 				const hash = await makeGameTransaction('j2Timeout', [], 0)
-				console.log('Timeout checked successfully!', hash)
+				console.log('Funds successfully transferer!', hash)
 			}
 			// Validation guard / Access-control
-			if (accountStatus !== AccountStatus.Opponent) {
+			if (accountStatus === AccountStatus.Opponent) {
 				const hash = await makeGameTransaction('j1Timeout', [], 0)
-				console.log('Timeout checked successfully!', hash)
+				console.log('Funds successfully transferer', hash)
 			}
 		} catch (error: any) {
 			console.log('Error checking timeout:', error)
@@ -101,7 +101,8 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 		try {
 			// Validation guard / Access-control
 			if (accountStatus === AccountStatus.Player) {
-				const hash = await makeGameTransaction('solve', [connectedGame.move, connectedGame.c1Hash], 0)
+				// TODO: this is not working...
+				const hash = await makeGameTransaction('solve', [Number(connectedGame.move), BigInt(connectedGame.salt)], 0)
 				console.log('Game solved successfully!', hash)
 			}
 		} catch (error: any) {
@@ -122,7 +123,7 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 				onClick={handleCheckTimeout}
 				fullWidth
 				sx={styles.btn}
-				disabled={!timeoutExpired}
+				disabled={!timeoutExpired || gameEnded || opponentHasMoved}
 				color="secondary"
 			>
 				Initiate J2 Timeout
@@ -136,7 +137,7 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 				fullWidth
 				sx={styles.btn}
 				color="secondary"
-				disabled={!canSolve}
+				disabled={!opponentHasMoved || gameEnded}
 			>
 				Solve Game
 			</Button>
@@ -156,7 +157,7 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 				onClick={handleCheckTimeout}
 				fullWidth
 				sx={styles.btn}
-				disabled={!timeoutExpired}
+				disabled={!timeoutExpired || gameEnded || !opponentHasMoved}
 				color="secondary"
 			>
 				Initiate J1 Timeout
@@ -164,9 +165,21 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 			<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
 				{timeoutExpired ? 'Timeout has expired' : 'Timeout has not expired yet'}
 			</Typography>
-			<Button variant="contained" onClick={handleOpenDialog} fullWidth sx={styles.btn} color="secondary">
+			<Button
+				variant="contained"
+				onClick={handleOpenDialog}
+				fullWidth
+				sx={styles.btn}
+				color="secondary"
+				disabled={opponentHasMoved || gameEnded}
+			>
 				Make Move
 			</Button>
+			{opponentHasMoved && (
+				<Typography variant="caption" display="block" color="caution" mt={0.5} mb={0} textAlign="left">
+					A move has already been made
+				</Typography>
+			)}
 		</>
 	)
 
@@ -205,8 +218,16 @@ const GameMoves = ({ connectedGame, timeoutExpired, canSolve }: GameMovesProps):
 					As the <strong>{accountStatus}</strong> in this game, you have the following actions available for you to
 					call:
 				</Typography>
-				{accountStatus === AccountStatus.Player && <PlayerActions />}
-				{accountStatus === AccountStatus.Opponent && <OpponentActions />}
+				{gameEnded ? (
+					<Typography variant="h6" mb={2}>
+						This game has ended.
+					</Typography>
+				) : (
+					<>
+						{accountStatus === AccountStatus.Player && <PlayerActions />}
+						{accountStatus === AccountStatus.Opponent && <OpponentActions />}
+					</>
+				)}
 			</Paper>
 			<GameMoveDialog />
 		</>

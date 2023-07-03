@@ -34,6 +34,7 @@ type Web3ContextProps = {
 	showWrongNetwork: boolean
 	txSuccess: boolean
 	txError: string | null
+	gameEnded: boolean
 	disconnect: (callback?: any) => void
 	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<any>
 	readGameValue: (fnName: string) => Promise<any>
@@ -57,6 +58,7 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	showWrongNetwork: false,
 	txSuccess: false,
 	txError: null,
+	gameEnded: false,
 	disconnect: () => {},
 	makeGameTransaction: async () => {
 		throw new Error('No game address set')
@@ -87,6 +89,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	const [showWrongNetwork, setShowWrongNetwork] = useState<boolean>(false)
 	const [txSuccess, setTxSuccess] = useState<boolean>(false)
 	const [txError, setTxError] = useState<string | null>(null)
+	const [gameEnded, setGameEnded] = useState<boolean>(false)
 	// Context state
 	const [web3ContextValue, setWeb3ContextValue] = useState<Web3ContextProps>(initialWeb3ContextValue)
 
@@ -162,6 +165,14 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 				const tx = await walletClient?.writeContract(request)
 				setTxSuccess(true)
 				setTxError(null)
+				// TODO: handle potential game-ending actions
+				const gameEndingActions = ['j1Timeout', 'j2Timeout', 'solve']
+				if (gameEndingActions.includes(fnName)) {
+					// Tx was successful and funds were transferred, update state that game has ended
+					setGameEnded(true)
+				} else {
+					setGameEnded(false) // 'play' opponent action
+				}
 				return tx
 			} catch (error: any) {
 				setTxSuccess(false)
@@ -262,6 +273,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			showWrongNetwork,
 			txSuccess,
 			txError,
+			gameEnded,
 			disconnect: handleDisconnect,
 			readGameValue,
 			makeGameTransaction,
@@ -278,6 +290,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		showWrongNetwork,
 		txSuccess,
 		txError,
+		gameEnded,
 	])
 
 	return <Web3Context.Provider value={web3ContextValue}>{children}</Web3Context.Provider>

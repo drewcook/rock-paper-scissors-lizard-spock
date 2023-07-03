@@ -65,13 +65,14 @@ export async function GET(req: Request) {
 // POST /api/accounts
 export async function POST(req: Request) {
 	const params = await req.json()
-	const { player, move, msgSignature, c1Hash, opponent, stake, gameAddress } = params
+	const { player, move, msgSignature, c1Hash, salt, opponent, stake, gameAddress } = params
 	await connectToMongo()
 	const account = await AccountModel.create({
 		player,
 		move,
 		msgSignature,
 		c1Hash,
+		salt,
 		opponent,
 		stake,
 		gameAddress,

@@ -1,6 +1,6 @@
 'use client'
 import { Alert, Snackbar, ThemeProvider } from '@mui/material'
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
 
 import theme from '@/lib/theme'
 

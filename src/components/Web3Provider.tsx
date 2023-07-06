@@ -14,7 +14,7 @@ import {
 
 import { HASHER_ADDRESS, PREFERRED_CHAIN_ID, RPS_ABI } from '@/lib/constants'
 import { IAccountDoc } from '@/lib/models'
-import { AccountStatus } from '@/lib/types'
+import { AccountStatus, Move, WagmiString } from '@/lib/types'
 
 import HASHER_ABI from '../lib/abis/hasher.json'
 
@@ -36,7 +36,8 @@ type Web3ContextProps = {
 	txError: string | null
 	gameEnded: boolean
 	disconnect: (callback?: any) => void
-	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<any>
+	createMoveHash: (move: Move, salt: string) => Promise<[string, WagmiString]>
+	makeGameTransaction: (fnName: string, args: any[], value: number) => Promise<[unknown, WagmiString]>
 	readGameValue: (fnName: string) => Promise<any>
 	loadGameForAccount: (account: IAccountDoc) => void
 	resetTxNotifications: () => void
@@ -60,6 +61,9 @@ const initialWeb3ContextValue: Web3ContextProps = {
 	txError: null,
 	gameEnded: false,
 	disconnect: () => {},
+	createMoveHash: () => {
+		throw new Error('No game address set')
+	},
 	makeGameTransaction: async () => {
 		throw new Error('No game address set')
 	},
@@ -106,7 +110,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 	const createGameContract = useCallback(
 		async (gameAddress: Address) => {
 			if (!gameAddress) {
-				throw new Error('No game address set, plese connect an account')
+				throw new Error('No game address set, please connect an account')
 			} else {
 				setGameContract(
 					getContract({
@@ -146,15 +150,37 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 		[connectedGame?.gameAddress],
 	)
 
-	const makeGameTransaction = useCallback(
-		async (fnName: string, args: any[], value: number) => {
+	const createMoveHash = useCallback(
+		async (move: Move, salt: string): Promise<[string, WagmiString]> => {
 			try {
-				console.info({ fnName, args, value })
+				const { request, result: c1Hash } = await publicClient?.simulateContract({
+					account: address,
+					address: HASHER_ADDRESS,
+					abi: HASHER_ABI,
+					functionName: 'hash',
+					args: [move, salt],
+				})
+				const txHash: WagmiString = await walletClient?.writeContract(request)
+				setTxSuccess(true)
+				setTxError(null)
+				return [`${c1Hash}`, txHash]
+			} catch (error: any) {
+				setTxSuccess(false)
+				setTxError(error.message)
+				throw error
+			}
+		},
+		[publicClient, walletClient, address],
+	)
+
+	const makeGameTransaction = useCallback(
+		async (fnName: string, args: any[], value: number): Promise<[unknown, WagmiString]> => {
+			try {
 				if (!connectedGame?.gameAddress) {
 					setTxError('No game address set')
 					throw new Error('No game address set')
 				}
-				const { request } = await publicClient.simulateContract({
+				const { request, result } = await publicClient.simulateContract({
 					account: address,
 					address: connectedGame?.gameAddress,
 					abi: RPS_ABI,
@@ -162,18 +188,19 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 					args: args,
 					value: parseEther(`${value}`),
 				})
-				const tx = await walletClient?.writeContract(request)
+				const txHash: WagmiString = await walletClient?.writeContract(request)
 				setTxSuccess(true)
 				setTxError(null)
-				// TODO: handle potential game-ending actions
+				// Handle game-ending actions to update context state for displaying across UI
 				const gameEndingActions = ['j1Timeout', 'j2Timeout', 'solve']
 				if (gameEndingActions.includes(fnName)) {
 					// Tx was successful and funds were transferred, update state that game has ended
+					// TODO: instead of ephemeral state, update the DB record to reflect game has ended
 					setGameEnded(true)
 				} else {
 					setGameEnded(false) // 'play' opponent action
 				}
-				return tx
+				return [result, txHash]
 			} catch (error: any) {
 				setTxSuccess(false)
 				setTxError(error.message)
@@ -275,6 +302,7 @@ export const Web3Provider = ({ children }: Web3ProviderProps): JSX.Element => {
 			txError,
 			gameEnded,
 			disconnect: handleDisconnect,
+			createMoveHash,
 			readGameValue,
 			makeGameTransaction,
 			loadGameForAccount,

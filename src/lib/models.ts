@@ -11,7 +11,7 @@ export interface IAccountDoc extends Document {
 	move: Move // move of the account
 	msgSignature: string // signature of the commitment
 	c1Hash: string // hash of the commitment
-	salt: string // salt of the commitment (custom message), in format of BigInt
+	salt: string // salt of the commitment (custom message signed)
 	opponent: Address // address of the opponent
 	stake: number // in wei
 	gameAddress: Address // address of the deployed game contract

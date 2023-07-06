@@ -3,7 +3,6 @@ import { createHash } from 'crypto'
 // Example usage
 // const inputString = 'example';
 // const salt = generateSaltFromString(inputString);
-// console.log(salt);
 const generateSaltFromString = (input: string): bigint => {
 	// Create a SHA-256 hash object
 	const hash = createHash('sha256')

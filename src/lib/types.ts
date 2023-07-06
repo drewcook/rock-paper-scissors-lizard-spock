@@ -16,4 +16,4 @@ export enum AccountStatus {
 }
 
 export type XString = `0x${string}`
-export type WagmiString = XString | Uint8Array
+export type WagmiString = XString | undefined

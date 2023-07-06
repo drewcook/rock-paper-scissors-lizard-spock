@@ -69,13 +69,13 @@ const GameMoves = ({ connectedGame, timeoutExpired, opponentHasMoved }: GameMove
 		try {
 			// // Validation guard / Access-control
 			if (accountStatus === AccountStatus.Player) {
-				const hash = await makeGameTransaction('j2Timeout', [], 0)
-				console.log('Funds successfully transferer!', hash)
+				const [_, txHash] = await makeGameTransaction('j2Timeout', [], 0)
+				console.log('Funds successfully transferer!', { txHash })
 			}
 			// Validation guard / Access-control
 			if (accountStatus === AccountStatus.Opponent) {
-				const hash = await makeGameTransaction('j1Timeout', [], 0)
-				console.log('Funds successfully transferer', hash)
+				const [_, txHash] = await makeGameTransaction('j1Timeout', [], 0)
+				console.log('Funds successfully transferer', { txHash })
 			}
 		} catch (error: any) {
 			console.log('Error checking timeout:', error)
@@ -87,8 +87,12 @@ const GameMoves = ({ connectedGame, timeoutExpired, opponentHasMoved }: GameMove
 		try {
 			// Validation guard / Access-control
 			if (accountStatus === AccountStatus.Opponent) {
-				const hash = await makeGameTransaction('play', [numberToBytes(Number(selectedMove))], connectedGame.stake)
-				console.log('Move played successfully!', hash)
+				const [_, txHash] = await makeGameTransaction(
+					'play',
+					[numberToBytes(Number(selectedMove))],
+					connectedGame.stake,
+				)
+				console.log('Move played successfully!', { txHash })
 				handleCloseDialog()
 			}
 		} catch (error: any) {
@@ -101,9 +105,10 @@ const GameMoves = ({ connectedGame, timeoutExpired, opponentHasMoved }: GameMove
 		try {
 			// Validation guard / Access-control
 			if (accountStatus === AccountStatus.Player) {
-				// TODO: this is not working...
-				const hash = await makeGameTransaction('solve', [Number(connectedGame.move), BigInt(connectedGame.salt)], 0)
-				console.log('Game solved successfully!', hash)
+				const move = Number(connectedGame.move) // Parse the stored move as Number
+				const salt = BigInt(connectedGame.salt) // Parse the stored salt as BigInt
+				const [_, txHash] = await makeGameTransaction('solve', [move, salt], 0)
+				console.log('Game solved successfully!', { txHash })
 			}
 		} catch (error: any) {
 			console.log('Error solving game:', error)
